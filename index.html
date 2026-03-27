@@ -15,12 +15,25 @@
         .notice {margin-top:12px;color:#d9534f;font-weight:bold;}
     </style>
 
-    <!-- --------------------------------------------------------------- -->
-    <!-- 1️⃣ Load the **v2** Teams JavaScript SDK (the only URL that works) -->
-    <!-- --------------------------------------------------------------- -->
-    <script src="https://statics.teams.cdn.office.net/sdk/v2/js/MicrosoftTeams.min.js"
+    <!-- -------------------------------------------------------------
+         🟢  LOAD THE **VERSION‑SPECIFIC** Teams SDK (Microsoft CDN)
+         ------------------------------------------------------------- -->
+    <!-- Replace the version number with the newest one you want.
+         As of today the newest is 2.12.0 – you can look at the table
+         below for later releases. -->
+    <script src="https://statics.teams.cdn.office.net/sdk/v2.12.0/js/MicrosoftTeams.min.js"
             integrity="sha384-5Xxk4XGnu4gF8wl62/zYvZ6yFVA0KTzMb+YyG+FniD9U2RjUSg47tCroT9BwW0rQ"
             crossorigin="anonymous"></script>
+
+    <!-- -------------------------------------------------------------
+         OR, if your corporate network blocks the Microsoft CDN,
+         use the public npm CDN (unpkg). Comment out the line above
+         and uncomment the line below.
+         ------------------------------------------------------------- -->
+    <!--
+    <script src="https://unpkg.com/@microsoft/teams-js@2.12.0/dist/MicrosoftTeams.min.js"
+            crossorigin="anonymous"></script>
+    -->
 </head>
 <body>
     <div class="container">
@@ -40,33 +53,32 @@
             <p id="status"></p>
         </div>
 
-        <!-- Friendly notice when the SDK cannot be used -->
         <p id="sdkNotice" class="notice" style="display:none;">
             ⚠️ This page is not running inside Microsoft Teams or the Teams SDK could not be loaded.
-            The upload will succeed, but the bot will not receive the callback.
+            The file will upload, but the bot will not receive the callback.
         </p>
     </div>
 
     <script>
         /* -------------------------------------------------------------
-           2️⃣ Initialise the Teams SDK – works for v2 *and* v1 clients
+           1️⃣ Initialise the Teams SDK – works for v2 *and* v1 clients
            ------------------------------------------------------------- */
-        let isTeamsReady = false;   // true only when we can call submitTask()
+        let isTeamsReady = false;
         function initTeamsSdk() {
             if (typeof microsoftTeams === "undefined") {
-                console.warn("Microsoft Teams SDK script did NOT load.");
+                console.warn("Teams SDK script did NOT load.");
                 document.getElementById("sdkNotice").style.display = "block";
                 return false;
             }
 
-            // v2 SDK: microsoftTeams.app.initialize()
+            // v2 SDK initialisation
             if (microsoftTeams.app && typeof microsoftTeams.app.initialize === "function") {
                 microsoftTeams.app.initialize();
                 isTeamsReady = true;
                 return true;
             }
 
-            // Fallback for the older v1 SDK
+            // Fallback for very old v1 SDKs
             try {
                 microsoftTeams.initialize();
                 isTeamsReady = true;
@@ -77,30 +89,27 @@
                 return false;
             }
         }
-        initTeamsSdk();   // run immediately
+        initTeamsSdk();
 
         /* -------------------------------------------------------------
-           Helper – read query parameters from the URL
+           2️⃣ Helper – read query parameters (conversationId, names, …)
            ------------------------------------------------------------- */
         function getQueryParam(name) {
             const params = new URLSearchParams(window.location.search);
             return params.get(name);
         }
 
-        /* -------------------------------------------------------------
-           Extract parameters on page load (for debugging / display)
-           ------------------------------------------------------------- */
         const context = {
             conversationId: getQueryParam("conversationId"),
             firstName:      getQueryParam("firstName"),
             lastName:       getQueryParam("lastName")
         };
         document.getElementById("conversationId").textContent = context.conversationId || "Not Found";
-        document.getElementById("firstName").textContent   = context.firstName      || "Not Found";
-        document.getElementById("lastName").textContent    = context.lastName       || "Not Found";
+        document.getElementById("firstName").textContent    = context.firstName      || "Not Found";
+        document.getElementById("lastName").textContent     = context.lastName       || "Not Found";
 
         /* -------------------------------------------------------------
-           3️⃣ Called when the user clicks **Upload**
+           3️⃣ Upload button handler
            ------------------------------------------------------------- */
         function uploadFileComplete() {
             const fileInput = document.getElementById('fileInput');
@@ -113,13 +122,13 @@
             }
 
             // ---------------------------------------------------------
-            // Here you could replace the simulated delay with a real
-            // file‑upload API call (SharePoint, Azure Blob, etc.)
+            // Replace this block with a real upload API if you need to
+            // store the file somewhere (SharePoint, Azure Blob, …).
             // ---------------------------------------------------------
             status.textContent = `✅ File "${file.name}" uploaded successfully!`;
 
             // ---------------------------------------------------------
-            // 4️⃣ Send the result back to Copilot Studio (if SDK ready)
+            // 4️⃣ Send the result back to Copilot Studio (only if SDK ready)
             // ---------------------------------------------------------
             if (isTeamsReady) {
                 try {
@@ -136,7 +145,7 @@
                 }
             } else {
                 console.warn("Teams SDK not ready – submitTask skipped.");
-                // The notice already tells the user why we can’t call back.
+                // The notice already informs the user.
             }
         }
     </script>
