@@ -2,170 +2,103 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>File Uploader</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            padding: 20px;
-            background:#f5f5f5;
-        }
-        .container {
-            background:#fff;
-            padding:24px;
-            border-radius:8px;
-            box-shadow:0 4px 12px rgba(0,0,0,.1);
-        }
-        h3 {color:#333;margin-bottom:20px;}
-        .query‑param {
-            margin-top:15px;
-            background:#eee;
-            padding:10px;
-            border-radius:5px;
-            font-family:monospace;
-        }
-        .notice {
-            margin-top:12px;
-            color:#d9534f;
-            font-weight:bold;
-        }
+        body{font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              padding:20px;background:#f5f5f5;}
+        .container{background:#fff;padding:24px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.1);}
+        h3{color:#333;margin-bottom:20px;}
+        .query{margin-top:15px;background:#eee;padding:10px;border-radius:5px;font-family:monospace;}
+        .notice{margin-top:12px;color:#d9534f;font-weight:bold;}
     </style>
 
-    <!-- --------------------------------------------------------------
-         👉 Load the Teams JavaScript SDK.
-         -------------------------------------------------------------- -->
-    <!-- 1️⃣ Preferred – Microsoft’s official CDN (if it ever exists). -->
-    <!--
-    <script src="https://statics.teams.cdn.office.net/sdk/v2.23.0/js/MicrosoftTeams.min.js"
-            integrity="sha384-5Xxk4XGnu4gF8wl62/zYvZ6yFVA0KTzMb+YyG+FniD9U2RjUSg47tCroT9BwW0rQ"
-            crossorigin="anonymous"></script>
-    -->
-
-    <!-- 2️⃣ Fallback – always reachable via npm (unpkg). -->
+    <!-- Load the Teams SDK from the public npm CDN (always reachable) -->
     <script src="https://unpkg.com/@microsoft/teams-js@2.22.0/dist/MicrosoftTeams.min.js"
             crossorigin="anonymous"></script>
-    <!--  (replace 2.22.0 with any newer version that exists, e.g. 2.23.1)  -->
-
 </head>
 <body>
-    <div class="container">
-        <h3>File Upload Modal with Debugging</h3>
+<div class="container">
+    <h3>File Upload Modal</h3>
 
-        <div id="paramsContainer" class="query‑param">
-            <p><strong>Conversation ID:</strong> <span id="conversationId">Loading…</span></p>
-            <p><strong>First Name:</strong>   <span id="firstName">Loading…</span></p>
-            <p><strong>Last Name:</strong>    <span id="lastName">Loading…</span></p>
-        </div>
-
-        <div id="fileUploadSection">
-            <h3>Upload Document</h3>
-            <p>Select a file from your device.</p>
-            <input type="file" id="fileInput" />
-            <button onclick="uploadFileComplete()">Upload</button>
-            <p id="status"></p>
-        </div>
-
-        <!-- Shown only when the SDK cannot be loaded (e.g. the page is opened outside Teams) -->
-        <p id="sdkNotice" class="notice" style="display:none;">
-            ⚠️ This page is not running inside Microsoft Teams or the Teams SDK could not be loaded.
-            The file will upload, but the bot will not receive the callback.
-        </p>
+    <div class="query">
+        <p><strong>Conversation ID:</strong> <span id="cid">Loading…</span></p>
+        <p><strong>First Name:</strong>   <span id="fn">Loading…</span></p>
+        <p><strong>Last Name:</strong>    <span id="ln">Loading…</span></p>
     </div>
 
-    <script>
-        /* -------------------------------------------------------------
-           1️⃣ Initialise the Teams SDK – works for v2 *and* legacy v1
-           ------------------------------------------------------------- */
-        let isTeamsReady = false;
+    <h3>Upload Document</h3>
+    <input type="file" id="fileInput"/>
+    <button onclick="upload()">Upload</button>
+    <p id="status"></p>
 
-        function initTeamsSdk() {
-            // If the <script> tag could not be fetched, the global object does not exist.
-            if (typeof microsoftTeams === "undefined") {
-                console.warn("Teams SDK script did NOT load.");
-                document.getElementById("sdkNotice").style.display = "block";
-                return false;
-            }
+    <p id="warn" class="notice" style="display:none;">
+        ⚠️ This page is not running inside Microsoft Teams or the Teams SDK could not be loaded.
+        The file will upload, but the bot will not receive the callback.
+    </p>
+</div>
 
-            // ---- v2 SDK (preferred) ------------------------------------
-            if (microsoftTeams.app && typeof microsoftTeams.app.initialize === "function") {
-                microsoftTeams.app.initialize();
-                isTeamsReady = true;
-                return true;
-            }
-
-            // ---- v1 fallback (just in case) -----------------------------
-            try {
-                microsoftTeams.initialize();
-                isTeamsReady = true;
-                return true;
-            } catch (e) {
-                console.error("Failed to initialise Teams SDK:", e);
-                document.getElementById("sdkNotice").style.display = "block";
-                return false;
-            }
+<script>
+    // -----------------------------------------------------------------
+    // Initialise the Teams SDK (v2 + legacy fallback)
+    // -----------------------------------------------------------------
+    let sdkReady = false;
+    function initSdk() {
+        if (typeof microsoftTeams === "undefined") {
+            console.warn("Teams SDK script did NOT load.");
+            document.getElementById("warn").style.display = "block";
+            return;
         }
-
-        // Run the initialise routine as soon as the script is parsed.
-        initTeamsSdk();
-
-        /* -------------------------------------------------------------
-           2️⃣ Helper – pull query‑string parameters (conversationId, names)
-           ------------------------------------------------------------- */
-        function getQueryParam(name) {
-            const params = new URLSearchParams(window.location.search);
-            return params.get(name);
+        // v2 SDK
+        if (microsoftTeams.app && typeof microsoftTeams.app.initialize === "function") {
+            microsoftTeams.app.initialize();
+            sdkReady = true;
+            return;
         }
+        // v1 fallback
+        try { microsoftTeams.initialize(); sdkReady = true; }
+        catch (e) { console.error(e); }
+    }
+    initSdk();
 
-        const context = {
-            conversationId: getQueryParam("conversationId"),
-            firstName:      getQueryParam("firstName"),
-            lastName:       getQueryParam("lastName")
-        };
+    // -----------------------------------------------------------------
+    // Pull the query‑string parameters that the bot put into the URL
+    // -----------------------------------------------------------------
+    const qs = new URLSearchParams(window.location.search);
+    const context = {
+        conversationId: qs.get("conversationId"),
+        firstName:      qs.get("firstName"),
+        lastName:       qs.get("lastName")
+    };
+    document.getElementById("cid").textContent = context.conversationId || "N/A";
+    document.getElementById("fn").textContent = context.firstName   || "N/A";
+    document.getElementById("ln").textContent = context.lastName    || "N/A";
 
-        // Show the values on the page – helpful for debugging
-        document.getElementById("conversationId").textContent = context.conversationId || "Not Found";
-        document.getElementById("firstName").textContent    = context.firstName      || "Not Found";
-        document.getElementById("lastName").textContent     = context.lastName       || "Not Found";
+    // -----------------------------------------------------------------
+    // Upload button handler – you can replace the simulated delay
+    // with a real upload API if you need to store the file somewhere.
+    // -----------------------------------------------------------------
+    function upload() {
+        const file = document.getElementById('fileInput').files[0];
+        const status = document.getElementById('status');
+        if (!file) { status.textContent = "❌ No file selected!"; return; }
 
-        /* -------------------------------------------------------------
-           3️⃣ Upload button handler
-           ------------------------------------------------------------- */
-        function uploadFileComplete() {
-            const fileInput = document.getElementById('fileInput');
-            const file      = fileInput.files[0];
-            const status    = document.getElementById('status');
+        status.textContent = `✅ File "${file.name}" uploaded successfully!`;
 
-            if (!file) {
-                status.textContent = "❌ No file selected or upload failed!";
-                return;
-            }
-
-            // ---------------------------------------------------------
-            // 👉 Replace this block with a real upload API if you need it.
-            // ---------------------------------------------------------
-            status.textContent = `✅ File "${file.name}" uploaded successfully!`;
-
-            // ---------------------------------------------------------
-            // 4️⃣ Send data back to Copilot Studio (only if the SDK is ready)
-            // ---------------------------------------------------------
-            if (isTeamsReady) {
-                try {
-                    microsoftTeams.tasks.submitTask({
-                        status:         "success",
-                        fileName:       file.name,
-                        conversationId: context.conversationId,
-                        firstName:      context.firstName,
-                        lastName:       context.lastName
-                    });
-                } catch (e) {
-                    console.error("submitTask error:", e);
-                    status.textContent = "⚠️ Upload succeeded but submitTask failed.";
-                }
-            } else {
-                console.warn("Teams SDK not ready – submitTask skipped.");
-                // The yellow notice already tells the user why.
-            }
+        // ---------------------------------------------------------
+        // Send the result back to the bot (exact property names!)
+        // ---------------------------------------------------------
+        if (sdkReady) {
+            microsoftTeams.tasks.submitTask({
+                status:         "success",
+                fileName:       file.name,
+                conversationId: context.conversationId,
+                firstName:      context.firstName,
+                lastName:       context.lastName
+            });
+        } else {
+            console.warn("Teams SDK not ready – submitTask skipped.");
         }
-    </script>
+    }
+</script>
 </body>
 </html>
