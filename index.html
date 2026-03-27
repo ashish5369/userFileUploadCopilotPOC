@@ -5,41 +5,53 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>File Uploader</title>
     <style>
-        body {font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-              padding:20px; background:#f5f5f5;}
-        .container {background:#fff;padding:24px;border-radius:8px;
-                    box-shadow:0 4px 12px rgba(0,0,0,.1);}
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 20px;
+            background:#f5f5f5;
+        }
+        .container {
+            background:#fff;
+            padding:24px;
+            border-radius:8px;
+            box-shadow:0 4px 12px rgba(0,0,0,.1);
+        }
         h3 {color:#333;margin-bottom:20px;}
-        .query-param {margin-top:15px;background:#eee;padding:10px;
-                      border-radius:5px;font-family:monospace;}
-        .notice {margin-top:12px;color:#d9534f;font-weight:bold;}
+        .query‑param {
+            margin-top:15px;
+            background:#eee;
+            padding:10px;
+            border-radius:5px;
+            font-family:monospace;
+        }
+        .notice {
+            margin-top:12px;
+            color:#d9534f;
+            font-weight:bold;
+        }
     </style>
 
-    <!-- -------------------------------------------------------------
-         🟢  LOAD THE **VERSION‑SPECIFIC** Teams SDK (Microsoft CDN)
-         ------------------------------------------------------------- -->
-    <!-- Replace the version number with the newest one you want.
-         As of today the newest is 2.12.0 – you can look at the table
-         below for later releases. -->
-    <script src="https://statics.teams.cdn.office.net/sdk/v2.12.0/js/MicrosoftTeams.min.js"
+    <!-- --------------------------------------------------------------
+         👉 Load the Teams JavaScript SDK.
+         -------------------------------------------------------------- -->
+    <!-- 1️⃣ Preferred – Microsoft’s official CDN (if it ever exists). -->
+    <!--
+    <script src="https://statics.teams.cdn.office.net/sdk/v2.23.0/js/MicrosoftTeams.min.js"
             integrity="sha384-5Xxk4XGnu4gF8wl62/zYvZ6yFVA0KTzMb+YyG+FniD9U2RjUSg47tCroT9BwW0rQ"
             crossorigin="anonymous"></script>
-
-    <!-- -------------------------------------------------------------
-         OR, if your corporate network blocks the Microsoft CDN,
-         use the public npm CDN (unpkg). Comment out the line above
-         and uncomment the line below.
-         ------------------------------------------------------------- -->
-    <!--
-    <script src="https://unpkg.com/@microsoft/teams-js@2.12.0/dist/MicrosoftTeams.min.js"
-            crossorigin="anonymous"></script>
     -->
+
+    <!-- 2️⃣ Fallback – always reachable via npm (unpkg). -->
+    <script src="https://unpkg.com/@microsoft/teams-js@2.22.0/dist/MicrosoftTeams.min.js"
+            crossorigin="anonymous"></script>
+    <!--  (replace 2.22.0 with any newer version that exists, e.g. 2.23.1)  -->
+
 </head>
 <body>
     <div class="container">
         <h3>File Upload Modal with Debugging</h3>
 
-        <div id="paramsContainer" class="query-param">
+        <div id="paramsContainer" class="query‑param">
             <p><strong>Conversation ID:</strong> <span id="conversationId">Loading…</span></p>
             <p><strong>First Name:</strong>   <span id="firstName">Loading…</span></p>
             <p><strong>Last Name:</strong>    <span id="lastName">Loading…</span></p>
@@ -53,6 +65,7 @@
             <p id="status"></p>
         </div>
 
+        <!-- Shown only when the SDK cannot be loaded (e.g. the page is opened outside Teams) -->
         <p id="sdkNotice" class="notice" style="display:none;">
             ⚠️ This page is not running inside Microsoft Teams or the Teams SDK could not be loaded.
             The file will upload, but the bot will not receive the callback.
@@ -61,24 +74,26 @@
 
     <script>
         /* -------------------------------------------------------------
-           1️⃣ Initialise the Teams SDK – works for v2 *and* v1 clients
+           1️⃣ Initialise the Teams SDK – works for v2 *and* legacy v1
            ------------------------------------------------------------- */
         let isTeamsReady = false;
+
         function initTeamsSdk() {
+            // If the <script> tag could not be fetched, the global object does not exist.
             if (typeof microsoftTeams === "undefined") {
                 console.warn("Teams SDK script did NOT load.");
                 document.getElementById("sdkNotice").style.display = "block";
                 return false;
             }
 
-            // v2 SDK initialisation
+            // ---- v2 SDK (preferred) ------------------------------------
             if (microsoftTeams.app && typeof microsoftTeams.app.initialize === "function") {
                 microsoftTeams.app.initialize();
                 isTeamsReady = true;
                 return true;
             }
 
-            // Fallback for very old v1 SDKs
+            // ---- v1 fallback (just in case) -----------------------------
             try {
                 microsoftTeams.initialize();
                 isTeamsReady = true;
@@ -89,10 +104,12 @@
                 return false;
             }
         }
+
+        // Run the initialise routine as soon as the script is parsed.
         initTeamsSdk();
 
         /* -------------------------------------------------------------
-           2️⃣ Helper – read query parameters (conversationId, names, …)
+           2️⃣ Helper – pull query‑string parameters (conversationId, names)
            ------------------------------------------------------------- */
         function getQueryParam(name) {
             const params = new URLSearchParams(window.location.search);
@@ -104,6 +121,8 @@
             firstName:      getQueryParam("firstName"),
             lastName:       getQueryParam("lastName")
         };
+
+        // Show the values on the page – helpful for debugging
         document.getElementById("conversationId").textContent = context.conversationId || "Not Found";
         document.getElementById("firstName").textContent    = context.firstName      || "Not Found";
         document.getElementById("lastName").textContent     = context.lastName       || "Not Found";
@@ -122,13 +141,12 @@
             }
 
             // ---------------------------------------------------------
-            // Replace this block with a real upload API if you need to
-            // store the file somewhere (SharePoint, Azure Blob, …).
+            // 👉 Replace this block with a real upload API if you need it.
             // ---------------------------------------------------------
             status.textContent = `✅ File "${file.name}" uploaded successfully!`;
 
             // ---------------------------------------------------------
-            // 4️⃣ Send the result back to Copilot Studio (only if SDK ready)
+            // 4️⃣ Send data back to Copilot Studio (only if the SDK is ready)
             // ---------------------------------------------------------
             if (isTeamsReady) {
                 try {
@@ -145,7 +163,7 @@
                 }
             } else {
                 console.warn("Teams SDK not ready – submitTask skipped.");
-                // The notice already informs the user.
+                // The yellow notice already tells the user why.
             }
         }
     </script>
