@@ -4,108 +4,73 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>File Uploader</title>
-    <!-- 1. Include the official Microsoft TeamsJS library -->
-    <script src="https://res.cdn.office.net/teams-js/2.19.0/js/MicrosoftTeams.min.js"
-            integrity="sha384-09c/3eZMLc/LgTjB3hJj+fd9u3ssj+1M96jJ8T3r8n12I2/lvsxV52I47/K209yO"
-            crossorigin="anonymous"></script>
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; background-color: #f5f5f5; }
         .container { background-color: white; padding: 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h3 { color: #333; }
-        input[type="file"] { border: 1px solid #ccc; padding: 10px; border-radius: 4px; width: 95%; }
-        button { background-color: #6264A7; color: white; border: none; padding: 12px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 15px; }
-        button:hover { background-color: #464775; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-        .status { margin-top: 15px; font-weight: bold; }
-        .context-display { background: #eee; padding: 10px; border-radius: 5px; margin-top: 15px; font-size: 0.9rem; font-family: monospace; }
-        .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #6264A7; width: 20px; height: 20px; animation: spin 2s linear infinite; display: none; margin: 15px auto 0; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        h3 { color: #333; margin-bottom: 20px; }
+        .query-param { margin-top: 15px; background: #eeeeee; padding: 10px; border-radius: 5px; font-family: monospace; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h3>Upload Document to ServiceNow</h3>
-        <p>Select a file from your device. The file will be attached to your active case.</p>
-        <input type="file" id="fileInput" />
-        <button id="uploadButton" onclick="uploadFile()">Upload</button>
-        <div id="loader" class="loader"></div>
-        <p id="status" class="status"></p>
-
-        <!-- Context display area for debugging -->
-        <div class="context-display" id="contextDisplay">
-            <h4>Context Information (for debugging):</h4>
-            <p id="conversationIdDisplay"></p>
-            <p id="userNameDisplay"></p>
-            <p id="emailDisplay"></p>
+        <h3>File Upload Modal with Debugging</h3>
+        <div id="paramsContainer" class="query-param">
+            <p><strong>Conversation ID:</strong> <span id="conversationId">Loading...</span></p>
+            <p><strong>First Name:</strong> <span id="firstName">Loading...</span></p>
+            <p><strong>Last Name:</strong> <span id="lastName">Loading...</span></p>
+        </div>
+        <div id="fileUploadSection">
+            <h3>Upload Document</h3>
+            <p>Select a file from your device.</p>
+            <input type="file" id="fileInput" />
+            <button id="uploadButton">Upload</button>
+            <p id="uploadStatus"></p>
         </div>
     </div>
 
     <script>
-        // 1. Initialize the TeamsJS library.
-        microsoftTeams.app.initialize().then(() => {
-            console.log("Teams App SDK initialized successfully.");
-        });
-
-        // Extract query parameters
+        // Function to extract query parameters from URL
         function getQueryParam(paramName) {
             const urlParams = new URLSearchParams(window.location.search);
             return urlParams.get(paramName);
         }
 
-        // Display extracted query parameters for debugging
-        function displayContext() {
-            // Extract context values
+        // Extract parameters and store them in variables
+        function extractParams() {
             const conversationId = getQueryParam("conversationId");
-            const userName = getQueryParam("userName");
-            const email = getQueryParam("email");
+            const firstName = getQueryParam("firstName");
+            const lastName = getQueryParam("lastName");
 
-            // Display on the web page
-            document.getElementById("conversationIdDisplay").textContent = "Conversation ID: " + (conversationId || "Not available");
-            document.getElementById("userNameDisplay").textContent = "User Name: " + (userName || "Not available");
-            document.getElementById("emailDisplay").textContent = "Email: " + (email || "Not available");
+            // Display extracted parameters in the webpage for debugging
+            document.getElementById("conversationId").textContent = conversationId ? conversationId : "Not Found";
+            document.getElementById("firstName").textContent = firstName ? firstName : "Not Found";
+            document.getElementById("lastName").textContent = lastName ? lastName : "Not Found";
 
-            return { conversationId, userName, email };
+            // Store in variables for further processing
+            return { conversationId, firstName, lastName };
         }
 
-        displayContext(); // Call the function on page load
+        // Call the function on page load
+        const context = extractParams();
 
-        function showLoader(isLoading) {
-            document.getElementById('loader').style.display = isLoading ? 'block' : 'none';
-        }
+        // File upload button logic (optional to implement if upload is required)
+        document.getElementById("uploadButton").addEventListener("click", () => {
+            const fileInput = document.getElementById("fileInput");
+            const status = document.getElementById("uploadStatus");
 
-        async function uploadFile() {
-            const fileInput = document.getElementById('fileInput');
-            const status = document.getElementById('status');
-            
             if (fileInput.files.length === 0) {
-                status.textContent = 'Please select a file first.';
-                status.style.color = 'red';
+                status.textContent = "No file selected. Please select a file.";
                 return;
             }
 
             const file = fileInput.files[0];
             status.textContent = `Uploading "${file.name}"...`;
-            status.style.color = '#333';
-            showLoader(true);
-            document.getElementById("uploadButton").disabled = true;
 
-            // Simulate Upload (POC only)
+            // Simulate a file upload process (replace this with your backend logic)
             setTimeout(() => {
-                showLoader(false);
-                status.textContent = "Upload successful!";
-                status.style.color = 'green';
-                
-                // Send data to Copilot upon successful upload
-                const context = displayContext();
-                microsoftTeams.tasks.submitTask({
-                    filename: file.name,
-                    conversationId: context.conversationId,
-                    userName: context.userName,
-                    email: context.email
-                });
-
-            }, 2000); // Simulate 2-second upload delay
-        }
+                status.textContent = `File "${file.name}" uploaded successfully! ConversationId: ${context.conversationId}, Name: ${context.firstName} ${context.lastName}.`;
+            }, 2000);
+        });
     </script>
 </body>
 </html>
