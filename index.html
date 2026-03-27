@@ -5,20 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>File Uploader</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 20px; background-color: #f5f5f5; }
-        .container { background-color: white; padding: 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        h3 { color: #333; margin-bottom: 20px; }
-        .query-param { margin-top: 15px; background: #eeeeee; padding: 10px; border-radius: 5px; font-family: monospace; }
+        body {font-family:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+              padding:20px; background:#f5f5f5;}
+        .container {background:#fff;padding:24px;border-radius:8px;
+                    box-shadow:0 4px 12px rgba(0,0,0,.1);}
+        h3 {color:#333;margin-bottom:20px;}
+        .query-param {margin-top:15px;background:#eee;padding:10px;
+                      border-radius:5px;font-family:monospace;}
     </style>
+
+    <!-- ----------------------------------------------------------- -->
+    <!-- 1️⃣  Load the Microsoft Teams JavaScript SDK (required)      -->
+    <!-- ----------------------------------------------------------- -->
+    <script src="https://statics.teams.cdn.office.net/sdk/v1.15.0/js/MicrosoftTeams.min.js"></script>
 </head>
 <body>
     <div class="container">
         <h3>File Upload Modal with Debugging</h3>
+
         <div id="paramsContainer" class="query-param">
-            <p><strong>Conversation ID:</strong> <span id="conversationId">Loading...</span></p>
-            <p><strong>First Name:</strong> <span id="firstName">Loading...</span></p>
-            <p><strong>Last Name:</strong> <span id="lastName">Loading...</span></p>
+            <p><strong>Conversation ID:</strong> <span id="conversationId">Loading…</span></p>
+            <p><strong>First Name:</strong>   <span id="firstName">Loading…</span></p>
+            <p><strong>Last Name:</strong>    <span id="lastName">Loading…</span></p>
         </div>
+
         <div id="fileUploadSection">
             <h3>Upload Document</h3>
             <p>Select a file from your device.</p>
@@ -29,47 +39,68 @@
     </div>
 
     <script>
-        // Function to extract query parameters from URL
+        // -----------------------------------------------------------
+        // 2️⃣  Initialise the Teams SDK – MUST be done before any SDK call
+        // -----------------------------------------------------------
+        if (typeof microsoftTeams !== "undefined") {
+            microsoftTeams.initialize();
+        } else {
+            console.warn("Microsoft Teams SDK not loaded – you are probably testing the page outside of Teams.");
+        }
+
+        // -----------------------------------------------------------
+        // Helper – read query parameters from the URL
+        // -----------------------------------------------------------
         function getQueryParam(paramName) {
             const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.has(paramName) ? urlParams.get(paramName) : null; // Check if param exists
+            return urlParams.has(paramName) ? urlParams.get(paramName) : null;
         }
 
-        // Extract parameters on page load
-        function extractParams() {
-            const conversationId = getQueryParam("conversationId");
-            const firstName = getQueryParam("firstName");
-            const lastName = getQueryParam("lastName");
+        // -----------------------------------------------------------
+        // Extract parameters on page load (just for display / debug)
+        // -----------------------------------------------------------
+        const context = {
+            conversationId: getQueryParam("conversationId"),
+            firstName:      getQueryParam("firstName"),
+            lastName:       getQueryParam("lastName")
+        };
+        document.getElementById("conversationId").textContent = context.conversationId || "Not Found";
+        document.getElementById("firstName").textContent   = context.firstName      || "Not Found";
+        document.getElementById("lastName").textContent    = context.lastName       || "Not Found";
 
-            // Display extracted parameters on the page for debugging
-            document.getElementById("conversationId").textContent = conversationId || "Not Found";
-            document.getElementById("firstName").textContent = firstName || "Not Found";
-            document.getElementById("lastName").textContent = lastName || "Not Found";
-
-            return { conversationId, firstName, lastName }; // Return extracted parameters
-        }
-
-        const context = extractParams(); // Global variable to store context
-
-        // Function to handle file upload completion
+        // -----------------------------------------------------------
+        // 3️⃣  Called when the user clicks the **Upload** button
+        // -----------------------------------------------------------
         function uploadFileComplete() {
             const fileInput = document.getElementById('fileInput');
-            const file = fileInput.files[0];
-            const status = document.getElementById('status');
+            const file      = fileInput.files[0];
+            const status    = document.getElementById('status');
 
-            if (file) {
-                status.textContent = `File "${file.name}" uploaded successfully!`;
+            if (!file) {
+                status.textContent = "❌ No file selected or upload failed!";
+                return;
+            }
 
-                // Send results back to Copilot Studio
+            // -------------------------------------------------------
+            // Here you could call a real upload endpoint.
+            // For the “minimal‑change” demo we just simulate success.
+            // -------------------------------------------------------
+            status.textContent = `✅ File "${file.name}" uploaded successfully!`;
+
+            // -------------------------------------------------------
+            // 4️⃣  Send the result back to Copilot Studio via submitTask()
+            // -------------------------------------------------------
+            if (typeof microsoftTeams !== "undefined") {
                 microsoftTeams.tasks.submitTask({
-                    status: "success",
-                    fileName: file.name,
+                    status:         "success",
+                    fileName:       file.name,
                     conversationId: context.conversationId,
-                    firstName: context.firstName,
-                    lastName: context.lastName
+                    firstName:      context.firstName,
+                    lastName:       context.lastName
                 });
             } else {
-                status.textContent = "No file selected or upload failed!";
+                console.error("Microsoft Teams SDK is not available – cannot call submitTask()");
+                status.textContent = "⚠️ Upload succeeded but Teams SDK not loaded.";
             }
         }
     </script>
