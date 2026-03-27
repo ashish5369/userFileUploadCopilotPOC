@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>File Uploader</title>
     <!-- 1. Include the official Microsoft TeamsJS library -->
     <script src="https://res.cdn.office.net/teams-js/2.19.0/js/MicrosoftTeams.min.js"
@@ -16,6 +17,7 @@
         button:hover { background-color: #464775; }
         button:disabled { background-color: #ccc; cursor: not-allowed; }
         .status { margin-top: 15px; font-weight: bold; }
+        .context-display { background: #eee; padding: 10px; border-radius: 5px; margin-top: 15px; font-size: 0.9rem; font-family: monospace; }
         .loader { border: 4px solid #f3f3f3; border-radius: 50%; border-top: 4px solid #6264A7; width: 20px; height: 20px; animation: spin 2s linear infinite; display: none; margin: 15px auto 0; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -28,13 +30,44 @@
         <button id="uploadButton" onclick="uploadFile()">Upload</button>
         <div id="loader" class="loader"></div>
         <p id="status" class="status"></p>
+
+        <!-- Context display area for debugging -->
+        <div class="context-display" id="contextDisplay">
+            <h4>Context Information (for debugging):</h4>
+            <p id="conversationIdDisplay"></p>
+            <p id="userNameDisplay"></p>
+            <p id="emailDisplay"></p>
+        </div>
     </div>
 
     <script>
-        // 2. Initialize the TeamsJS library.
+        // 1. Initialize the TeamsJS library.
         microsoftTeams.app.initialize().then(() => {
             console.log("Teams App SDK initialized successfully.");
         });
+
+        // Extract query parameters
+        function getQueryParam(paramName) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(paramName);
+        }
+
+        // Display extracted query parameters for debugging
+        function displayContext() {
+            // Extract context values
+            const conversationId = getQueryParam("conversationId");
+            const userName = getQueryParam("userName");
+            const email = getQueryParam("email");
+
+            // Display on the web page
+            document.getElementById("conversationIdDisplay").textContent = "Conversation ID: " + (conversationId || "Not available");
+            document.getElementById("userNameDisplay").textContent = "User Name: " + (userName || "Not available");
+            document.getElementById("emailDisplay").textContent = "Email: " + (email || "Not available");
+
+            return { conversationId, userName, email };
+        }
+
+        displayContext(); // Call the function on page load
 
         function showLoader(isLoading) {
             document.getElementById('loader').style.display = isLoading ? 'block' : 'none';
@@ -56,19 +89,22 @@
             showLoader(true);
             document.getElementById("uploadButton").disabled = true;
 
-            // --- POC SIMULATION ---
-            // We just wait for 2 seconds to simulate a real upload.
+            // Simulate Upload (POC only)
             setTimeout(() => {
                 showLoader(false);
                 status.textContent = "Upload successful!";
                 status.style.color = 'green';
                 
-                // 3. CRITICAL STEP: Send data back to Copilot Studio and close the modal.
+                // Send data to Copilot upon successful upload
+                const context = displayContext();
                 microsoftTeams.tasks.submitTask({
-                    filename: file.name
+                    filename: file.name,
+                    conversationId: context.conversationId,
+                    userName: context.userName,
+                    email: context.email
                 });
 
-            }, 2000); // 2-second delay
+            }, 2000); // Simulate 2-second upload delay
         }
     </script>
 </body>
