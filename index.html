@@ -23,8 +23,8 @@
             <h3>Upload Document</h3>
             <p>Select a file from your device.</p>
             <input type="file" id="fileInput" />
-            <button id="uploadButton">Upload</button>
-            <p id="uploadStatus"></p>
+            <button onclick="uploadFileComplete()">Upload</button>
+            <p id="status"></p>
         </div>
     </div>
 
@@ -32,45 +32,46 @@
         // Function to extract query parameters from URL
         function getQueryParam(paramName) {
             const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get(paramName);
+            return urlParams.has(paramName) ? urlParams.get(paramName) : null; // Check if param exists
         }
 
-        // Extract parameters and store them in variables
+        // Extract parameters on page load
         function extractParams() {
             const conversationId = getQueryParam("conversationId");
             const firstName = getQueryParam("firstName");
             const lastName = getQueryParam("lastName");
 
-            // Display extracted parameters in the webpage for debugging
-            document.getElementById("conversationId").textContent = conversationId ? conversationId : "Not Found";
-            document.getElementById("firstName").textContent = firstName ? firstName : "Not Found";
-            document.getElementById("lastName").textContent = lastName ? lastName : "Not Found";
+            // Display extracted parameters on the page for debugging
+            document.getElementById("conversationId").textContent = conversationId || "Not Found";
+            document.getElementById("firstName").textContent = firstName || "Not Found";
+            document.getElementById("lastName").textContent = lastName || "Not Found";
 
-            // Store in variables for further processing
-            return { conversationId, firstName, lastName };
+            return { conversationId, firstName, lastName }; // Return extracted parameters
         }
 
-        // Call the function on page load
-        const context = extractParams();
+        const context = extractParams(); // Global variable to store context
 
-        // File upload button logic (optional to implement if upload is required)
-        document.getElementById("uploadButton").addEventListener("click", () => {
-            const fileInput = document.getElementById("fileInput");
-            const status = document.getElementById("uploadStatus");
-
-            if (fileInput.files.length === 0) {
-                status.textContent = "No file selected. Please select a file.";
-                return;
-            }
-
+        // Function to handle file upload completion
+        function uploadFileComplete() {
+            const fileInput = document.getElementById('fileInput');
             const file = fileInput.files[0];
-            status.textContent = `Uploading "${file.name}"...`;
+            const status = document.getElementById('status');
 
-            // Simulate a file upload process (replace this with your backend logic)
-            setTimeout(() => {
-                status.textContent = `File "${file.name}" uploaded successfully! ConversationId: ${context.conversationId}, Name: ${context.firstName} ${context.lastName}.`;
-            }, 2000);
-        });
+            if (file) {
+                status.textContent = `File "${file.name}" uploaded successfully!`;
+
+                // Send results back to Copilot Studio
+                microsoftTeams.tasks.submitTask({
+                    status: "success",
+                    fileName: file.name,
+                    conversationId: context.conversationId,
+                    firstName: context.firstName,
+                    lastName: context.lastName
+                });
+            } else {
+                status.textContent = "No file selected or upload failed!";
+            }
+        }
     </script>
 </body>
 </html>
