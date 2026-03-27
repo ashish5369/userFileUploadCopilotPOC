@@ -12,12 +12,13 @@
         h3 {color:#333;margin-bottom:20px;}
         .query-param {margin-top:15px;background:#eee;padding:10px;
                       border-radius:5px;font-family:monospace;}
+        .notice {margin-top:12px;color:#d9534f;font-weight:bold;}
     </style>
 
-    <!-- ----------------------------------------------------------- -->
-    <!-- 1️⃣  Load the Microsoft Teams JavaScript SDK (required)      -->
-    <!-- ----------------------------------------------------------- -->
-    <script src="https://statics.teams.cdn.office.net/sdk/v1.15.0/js/MicrosoftTeams.min.js"></script>
+    <!-- 1️⃣ Load the Teams JavaScript SDK (required for submitTask) -->
+    <script src="https://statics.teams.cdn.office.net/sdk/v1.15.0/js/MicrosoftTeams.min.js"
+            integrity="sha384-9Y4WYs5fV8CSk1jDlK0F8pOPFf8M8BYxUgf1y5ao6vNVg7j/dpE8Rflv4xYLUIOO"
+            crossorigin="anonymous"></script>
 </head>
 <body>
     <div class="container">
@@ -36,41 +37,69 @@
             <button onclick="uploadFileComplete()">Upload</button>
             <p id="status"></p>
         </div>
+
+        <!-- Optional friendly notice when the SDK is not available -->
+        <p id="sdkNotice" class="notice" style="display:none;">
+            ⚠️ This page is not running inside Microsoft Teams. The upload will work, but the
+            result will **not** be sent back to the bot.
+        </p>
     </div>
 
     <script>
-        // -----------------------------------------------------------
-        // 2️⃣  Initialise the Teams SDK – MUST be done before any SDK call
-        // -----------------------------------------------------------
-        if (typeof microsoftTeams !== "undefined") {
-            microsoftTeams.initialize();
-        } else {
-            console.warn("Microsoft Teams SDK not loaded – you are probably testing the page outside of Teams.");
+        // -----------------------------------------------------------------
+        // 2️⃣ Initialise the Teams SDK – must be done before any Teams call
+        // -----------------------------------------------------------------
+        function initTeamsSdk() {
+            if (typeof microsoftTeams === "undefined") {
+                // SDK script didn’t load (e.g., page opened outside Teams)
+                console.warn("Microsoft Teams SDK not available.");
+                document.getElementById("sdkNotice").style.display = "block";
+                return false;
+            }
+
+            // The SDK provides two initialise signatures:
+            //   - old: microsoftTeams.initialize()
+            //   - new (v2+): microsoftTeams.app.initialize()
+            // We'll call the older one for maximum compatibility.
+            try {
+                microsoftTeams.initialize();
+            } catch (e) {
+                // Fallback for newer SDK versions
+                if (microsoftTeams.app && typeof microsoftTeams.app.initialize === "function") {
+                    microsoftTeams.app.initialize();
+                } else {
+                    console.error("Failed to initialise Teams SDK:", e);
+                }
+            }
+            return true;
         }
 
-        // -----------------------------------------------------------
+        // Run initialise as soon as the script is parsed (still before DOMReady)
+        const isTeamsReady = initTeamsSdk();
+
+        // -----------------------------------------------------------------
         // Helper – read query parameters from the URL
-        // -----------------------------------------------------------
-        function getQueryParam(paramName) {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.has(paramName) ? urlParams.get(paramName) : null;
+        // -----------------------------------------------------------------
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
         }
 
-        // -----------------------------------------------------------
+        // -----------------------------------------------------------------
         // Extract parameters on page load (just for display / debug)
-        // -----------------------------------------------------------
+        // -----------------------------------------------------------------
         const context = {
             conversationId: getQueryParam("conversationId"),
             firstName:      getQueryParam("firstName"),
             lastName:       getQueryParam("lastName")
         };
-        document.getElementById("conversationId").textContent = context.conversationId || "Not Found";
-        document.getElementById("firstName").textContent   = context.firstName      || "Not Found";
-        document.getElementById("lastName").textContent    = context.lastName       || "Not Found";
+        document.getElementById("conversationId").textContent = context.conversationId || "Not Found";
+        document.getElementById("firstName").textContent   = context.firstName      || "Not Found";
+        document.getElementById("lastName").textContent    = context.lastName       || "Not Found";
 
-        // -----------------------------------------------------------
-        // 3️⃣  Called when the user clicks the **Upload** button
-        // -----------------------------------------------------------
+        // -----------------------------------------------------------------
+        // 3️⃣ Called when the user clicks **Upload**
+        // -----------------------------------------------------------------
         function uploadFileComplete() {
             const fileInput = document.getElementById('fileInput');
             const file      = fileInput.files[0];
@@ -81,16 +110,16 @@
                 return;
             }
 
-            // -------------------------------------------------------
-            // Here you could call a real upload endpoint.
-            // For the “minimal‑change” demo we just simulate success.
-            // -------------------------------------------------------
+            // -------------------------------------------------------------
+            // Here you could replace the setTimeout with a real upload call.
+            // For the minimal‑change demo we simply simulate success.
+            // -------------------------------------------------------------
             status.textContent = `✅ File "${file.name}" uploaded successfully!`;
 
-            // -------------------------------------------------------
-            // 4️⃣  Send the result back to Copilot Studio via submitTask()
-            // -------------------------------------------------------
-            if (typeof microsoftTeams !== "undefined") {
+            // -------------------------------------------------------------
+            // 4️⃣ Send data back to Copilot Studio via submitTask (if SDK ready)
+            // -------------------------------------------------------------
+            if (isTeamsReady && typeof microsoftTeams !== "undefined") {
                 microsoftTeams.tasks.submitTask({
                     status:         "success",
                     fileName:       file.name,
@@ -99,8 +128,8 @@
                     lastName:       context.lastName
                 });
             } else {
-                console.error("Microsoft Teams SDK is not available – cannot call submitTask()");
-                status.textContent = "⚠️ Upload succeeded but Teams SDK not loaded.";
+                console.warn("Teams SDK not loaded – submitTask() skipped.");
+                // Optional: you could still store the data somewhere else here.
             }
         }
     </script>
