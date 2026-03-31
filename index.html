@@ -78,13 +78,16 @@ status.textContent = `✅ File "${file.name}" uploaded successfully!`;
 // Send the result back to the bot (exact property names!)
 // ---------------------------------------------------------
 if (sdkReady) {
-microsoftTeams.tasks.submitTask({
-status: "success",
-fileName: file.name,
-conversationId: context.conversationId,
-firstName: context.firstName,
-lastName: context.lastName
-});
+  const payload = {
+        status: "success",
+        fileName: file.name,
+        conversationId: context.conversationId,
+        firstName: context.firstName,
+        lastName: context.lastName
+    };
+    console.log("📤 Submitting task payload:", payload);
+    microsoftTeams.tasks.submitTask(payload);
+  
 } else {
 console.warn("Teams SDK not ready – submitTask skipped.");
 }
