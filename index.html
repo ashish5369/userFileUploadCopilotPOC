@@ -4,121 +4,101 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>File Upload Modal</title>
-
   <style>
-    :root {
-      --bg: #f5f5f5;
-      --card: #ffffff;
-      --text: #1f1f1f;
-      --muted: #666;
-      --ok: #107c10;
-      --err: #d13438;
-      --border: #d1d1d1;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      padding: 20px;
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-
-    .container {
-      max-width: 760px;
-      margin: 0 auto;
-      background: var(--card);
-      border-radius: 10px;
-      padding: 22px;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, .10);
-    }
-
-    h2 {
-      margin: 0 0 14px 0;
-      font-size: 28px;
-      line-height: 1.2;
-    }
-
-    h3 {
-      margin: 18px 0 10px;
-      font-size: 22px;
-      line-height: 1.2;
-    }
-
-    .query {
-      margin-top: 10px;
-      background: #f0f0f0;
-      border: 1px solid #e4e4e4;
-      border-radius: 8px;
-      padding: 14px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      word-break: break-word;
-    }
-
-    .query p {
-      margin: 8px 0;
-    }
-
-    .row {
-      margin-top: 12px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-    }
-
-    input[type="file"] {
-      max-width: 100%;
-    }
-
-    button {
-      border: 1px solid var(--border);
-      background: #fff;
-      border-radius: 6px;
-      padding: 8px 16px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    #status {
-      margin-top: 14px;
-      font-weight: 600;
-      min-height: 24px;
-    }
-
-    .ok { color: var(--ok); }
-    .err { color: var(--err); }
-
-    .notice {
-      margin-top: 12px;
-      color: var(--err);
-      font-weight: 600;
-      display: none;
-    }
-
-    .hint {
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 14px;
-    }
+    body{font-family:"Segoe UI",sans-serif;margin:0;padding:20px;background:#f5f5f5}
+    .container{background:#fff;max-width:760px;margin:0 auto;padding:20px;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,.1)}
+    .query{background:#f0f0f0;padding:12px;border-radius:8px;word-break:break-word}
+    .row{margin-top:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    #status{margin-top:12px;font-weight:600}
+    .ok{color:#107c10}.err{color:#d13438}.hint{color:#666;font-size:13px}
   </style>
-
-  <!-- Teams JS SDK -->
-  <script src="https://unpkg.com/@microsoft/teams-js@2.22.0/dist/MicrosoftTeams.min.js" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@microsoft/teams-js@2.22.0/dist/MicrosoftTeams.min.js"></script>
 </head>
 <body>
   <div class="container">
     <h2>File Upload Modal</h2>
-
     <div class="query">
-      <p><strong>Conversation ID:</strong> <span id="cid">Loading…</span></p>
-      <p><strong>First Name:</strong> <span id="fn">Loading…</span></p>
-      <p><strong>Last Name:</strong> <span id="ln">Loading…</span></p>
-      <p><strong>Email:</strong> <span id="em">*
+      <div><b>Conversation ID:</b> <span id="cid"></span></div>
+      <div><b>First Name:</b> <span id="fn"></span></div>
+      <div><b>Last Name:</b> <span id="ln"></span></div>
+      <div><b>Email:</b> <span id="em"></span></div>
+    </div>
+
+    <h3>Upload Document</h3>
+    <div class="row">
+      <input type="file" id="fileInput" />
+      <button id="uploadBtn" type="button">Upload</button>
+    </div>
+    <div id="status"></div>
+    <div class="hint">After upload, data is sent to bot. Then close this window using the top-right ✕.</div>
+  </div>
+
+  <script>
+    let sdkReady = false;
+    const qs = new URLSearchParams(window.location.search);
+    const context = {
+      conversationId: qs.get("conversationId") || "",
+      firstName: qs.get("firstName") || "",
+      lastName: qs.get("lastName") || "",
+      email: qs.get("email") || ""
+    };
+
+    document.getElementById("cid").textContent = context.conversationId || "N/A";
+    document.getElementById("fn").textContent = context.firstName || "N/A";
+    document.getElementById("ln").textContent = context.lastName || "N/A";
+    document.getElementById("em").textContent = context.email || "N/A";
+
+    (async function init(){
+      try{
+        if (window.microsoftTeams?.app?.initialize) {
+          await microsoftTeams.app.initialize();
+          sdkReady = true;
+        } else if (window.microsoftTeams?.initialize) {
+          microsoftTeams.initialize();
+          sdkReady = true;
+        }
+      } catch(e){ console.error(e); }
+    })();
+
+    function setStatus(msg, ok){
+      const el = document.getElementById("status");
+      el.className = ok ? "ok" : "err";
+      el.textContent = msg;
+    }
+
+    document.getElementById("uploadBtn").addEventListener("click", async () => {
+      const file = document.getElementById("fileInput").files[0];
+      if (!file) return setStatus("❌ Please select a file.", false);
+
+      // your real upload logic can go here
+      setStatus(`✅ "${file.name}" uploaded. Sending payload...`, true);
+
+      const payload = {
+        status: "success",
+        fileName: file.name,
+        conversationId: context.conversationId,
+        firstName: context.firstName,
+        lastName: context.lastName,
+        email: context.email
+      };
+
+      try {
+        if (!sdkReady) throw new Error("Teams SDK not ready");
+
+        if (microsoftTeams?.dialog?.submit) {
+          microsoftTeams.dialog.submit(payload);
+        } else if (microsoftTeams?.tasks?.submitTask) {
+          microsoftTeams.tasks.submitTask(payload);
+        } else {
+          throw new Error("No Teams submit API found");
+        }
+
+        setStatus("✅ Payload sent to bot. Please close this window using ✕.", true);
+      } catch (e) {
+        console.error(e);
+        setStatus("❌ Upload done but could not send payload to bot.", false);
+      }
+    });
+  </script>
+</body>
+</html>
