@@ -140,16 +140,18 @@
       margin-bottom: 4px;
     }
 
-    .file-name {
+    .file-name-list {
       font-size: 11px;
       color: #666;
-      margin-top: 6px;
+      margin-top: 10px;
       display: none;
       text-align: center;
-      line-height: 1.3;
+      line-height: 1.5;
+      max-height: 90px;
+      overflow-y: auto;
     }
-
-    .file-name.active {
+    
+    .file-name-list.active {
       display: block;
       color: #2c2c2c;
       font-weight: 500;
@@ -261,7 +263,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>Upload File</h2>
+    <h2>Upload File(s)</h2>
 
     <div class="info">
       <div class="info-item">
@@ -282,10 +284,10 @@
       <div class="file-input-wrapper">
         <label class="file-input-label" for="fileInput">
           <span class="file-icon">📎</span>
-          <span>Select a file</span>
+          <span>Select file(s)</span>
         </label>
-        <input type="file" id="fileInput" />
-        <div class="file-name" id="fileName"></div>
+        <input type="file" id="fileInput" multiple />
+        <div class="file-name-list" id="fileNameList"></div>
       </div>
     </div>
 
@@ -313,27 +315,32 @@
     document.getElementById("em").textContent = context.email || "N/A";
 
     const fileInput = document.getElementById("fileInput");
-    const fileNameDisplay = document.getElementById("fileName");
+    const fileNameListDisplay = document.getElementById("fileNameList");
     const uploadBtn = document.getElementById("uploadBtn");
     const status = document.getElementById("status");
 
-    // Update file name display when file is selected
+    // Update file name display when files are selected
     fileInput.addEventListener("change", (e) => {
       if (fileInput.files.length > 0) {
-        fileNameDisplay.textContent = "✓ " + fileInput.files[0].name;
-        fileNameDisplay.classList.add("active");
+        let fileNamesHTML = `${fileInput.files.length} file(s) selected:<br>`;
+        for(let i = 0; i < fileInput.files.length; i++) {
+            fileNamesHTML += `✓ ${fileInput.files[i].name}<br>`;
+        }
+        fileNameListDisplay.innerHTML = fileNamesHTML;
+        fileNameListDisplay.classList.add("active");
         status.textContent = "";
         status.classList.remove("error", "loading");
       } else {
-        fileNameDisplay.classList.remove("active");
+        fileNameListDisplay.classList.remove("active");
+        fileNameListDisplay.innerHTML = "";
       }
     });
 
     uploadBtn.addEventListener("click", () => {
-      const file = fileInput.files[0];
+      const files = fileInput.files;
 
-      if (!file) {
-        status.textContent = "Please select a file";
+      if (!files || files.length === 0) {
+        status.textContent = "Please select at least one file";
         status.classList.remove("loading", "success");
         status.classList.add("error");
         return;
@@ -344,8 +351,10 @@
       status.classList.add("loading");
       uploadBtn.disabled = true;
 
+      const fileNames = Array.from(files).map(file => file.name);
+
       const payload = {
-        fileName: file.name,
+        fileNames: fileNames, // Changed from fileName to fileNames array
         conversationId: context.conversationId,
         firstName: context.firstName,
         lastName: context.lastName,
