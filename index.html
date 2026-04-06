@@ -4,109 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>File Upload Modal</title>
-
   <style>
-    :root {
-      --bg: #f5f5f5;
-      --card: #ffffff;
-      --text: #1f1f1f;
-      --muted: #666;
-      --ok: #107c10;
-      --err: #d13438;
-      --border: #d1d1d1;
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      padding: 20px;
-      background: var(--bg);
-      color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }
-
-    .container {
-      max-width: 760px;
-      margin: 0 auto;
-      background: var(--card);
-      border-radius: 10px;
-      padding: 22px;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, .10);
-    }
-
-    h2 {
-      margin: 0 0 14px 0;
-      font-size: 28px;
-      line-height: 1.2;
-    }
-
-    h3 {
-      margin: 18px 0 10px;
-      font-size: 22px;
-      line-height: 1.2;
-    }
-
-    .query {
-      margin-top: 10px;
-      background: #f0f0f0;
-      border: 1px solid #e4e4e4;
-      border-radius: 8px;
-      padding: 14px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      word-break: break-word;
-    }
-
-    .query p { margin: 8px 0; }
-
-    .row {
-      margin-top: 12px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 12px;
-      align-items: center;
-    }
-
-    input[type="file"] { max-width: 100%; }
-
-    button {
-      border: 1px solid var(--border);
-      background: #fff;
-      border-radius: 6px;
-      padding: 8px 16px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
-    }
-
-    #status {
-      margin-top: 14px;
-      font-weight: 600;
-      min-height: 24px;
-    }
-
-    .ok { color: var(--ok); }
-    .err { color: var(--err); }
-
-    .notice {
-      margin-top: 12px;
-      color: var(--err);
-      font-weight: 600;
-      display: none;
-    }
-
-    .hint {
-      margin-top: 8px;
-      color: var(--muted);
-      font-size: 14px;
-    }
+    body{margin:0;padding:20px;background:#f5f5f5;font-family:"Segoe UI",sans-serif}
+    .container{max-width:760px;margin:0 auto;background:#fff;border-radius:10px;padding:22px;box-shadow:0 4px 14px rgba(0,0,0,.10)}
+    .query{margin-top:10px;background:#f0f0f0;border:1px solid #e4e4e4;border-radius:8px;padding:14px;word-break:break-word;font-family:monospace}
+    .row{margin-top:12px;display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+    button{border:1px solid #d1d1d1;background:#fff;border-radius:6px;padding:8px 16px;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    #status{margin-top:14px;font-weight:600;min-height:24px}
+    .ok{color:#107c10}.err{color:#d13438}
   </style>
-
-  <!-- Teams JS SDK -->
   <script src="https://unpkg.com/@microsoft/teams-js@2.22.0/dist/MicrosoftTeams.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -125,23 +32,12 @@
       <input type="file" id="fileInput" />
       <button id="uploadBtn" type="button">Upload</button>
     </div>
-
     <p id="status"></p>
-    <p class="hint">After successful upload, payload is sent back to Copilot Studio.</p>
-
-    <p id="warn" class="notice">
-      ⚠️ Teams SDK unavailable. Upload UI works, but payload cannot be sent to bot.
-    </p>
   </div>
 
   <script>
-    let sdkReady = false;
     let busy = false;
-
-    const uploadBtn = document.getElementById("uploadBtn");
-    const fileInput = document.getElementById("fileInput");
-    const statusEl = document.getElementById("status");
-    const warnEl = document.getElementById("warn");
+    let teamsReady = false;
 
     const qs = new URLSearchParams(window.location.search);
     const context = {
@@ -156,78 +52,59 @@
     document.getElementById("ln").textContent = context.lastName || "N/A";
     document.getElementById("em").textContent = context.email || "N/A";
 
-    async function initTeams() {
-      try {
-        if (typeof microsoftTeams === "undefined") {
-          warnEl.style.display = "block";
-          return false;
-        }
-
-        // v2 init
-        if (microsoftTeams.app?.initialize) {
-          await microsoftTeams.app.initialize();
-          return true;
-        }
-
-        // legacy init fallback
-        if (typeof microsoftTeams.initialize === "function") {
-          microsoftTeams.initialize();
-          return true;
-        }
-
-        warnEl.style.display = "block";
-        return false;
-      } catch (e) {
-        console.error("Teams init failed:", e);
-        warnEl.style.display = "block";
-        return false;
-      }
-    }
-
-    function setBusy(isBusy) {
-      busy = isBusy;
-      uploadBtn.disabled = isBusy;
-      fileInput.disabled = isBusy;
-    }
+    const uploadBtn = document.getElementById("uploadBtn");
+    const fileInput = document.getElementById("fileInput");
+    const statusEl = document.getElementById("status");
 
     function setStatus(text, type) {
-      statusEl.textContent = text || "";
-      statusEl.classList.remove("ok", "err");
-      if (type === "ok") statusEl.classList.add("ok");
-      if (type === "err") statusEl.classList.add("err");
+      statusEl.textContent = text;
+      statusEl.className = type || "";
     }
 
-    function submitPayloadToTeams(payload) {
-      // Preferred v2
-      if (microsoftTeams?.dialog?.submit) {
-        microsoftTeams.dialog.submit(payload);
-        return "dialog.submit";
-      }
+    function setBusy(flag) {
+      busy = flag;
+      uploadBtn.disabled = flag;
+      fileInput.disabled = flag;
+    }
 
-      // Legacy fallback (needed in some tenants/clients)
-      if (microsoftTeams?.tasks?.submitTask) {
-        microsoftTeams.tasks.submitTask(payload);
-        return "tasks.submitTask";
-      }
+    async function initTeams() {
+      try {
+        if (!window.microsoftTeams) return false;
 
-      throw new Error("No Teams submit API available");
+        // init v2 app (safe)
+        if (microsoftTeams.app?.initialize) {
+          await microsoftTeams.app.initialize();
+        } else if (microsoftTeams.initialize) {
+          microsoftTeams.initialize();
+        }
+
+        // We REQUIRE legacy submit API in your host
+        if (microsoftTeams.tasks?.submitTask) return true;
+
+        return false;
+      } catch (e) {
+        console.error("Teams init error:", e);
+        return false;
+      }
     }
 
     async function upload() {
       if (busy) return;
-
       const file = fileInput.files?.[0];
-      if (!file) {
-        setStatus("❌ Please select a file first.", "err");
-        return;
-      }
+      if (!file) return setStatus("❌ Please select a file first.", "err");
 
       setBusy(true);
       setStatus(`Uploading "${file.name}"...`);
 
       try {
-        // Replace with real upload API if needed
+        // Replace with real upload API call if needed
         await new Promise(r => setTimeout(r, 300));
+
+        if (!teamsReady) {
+          setStatus("❌ Teams API not ready (tasks.submitTask unavailable).", "err");
+          setBusy(false);
+          return;
+        }
 
         const payload = {
           status: "success",
@@ -239,20 +116,13 @@
           uploadedAt: new Date().toISOString()
         };
 
-        if (!sdkReady) {
-          setStatus("❌ Upload done, but Teams SDK not ready.", "err");
-          warnEl.style.display = "block";
-          setBusy(false);
-          return;
-        }
+        // CRITICAL: your tenant requires this path
+        microsoftTeams.tasks.submitTask(payload);
 
-        const submitMode = submitPayloadToTeams(payload);
-        setStatus(`✅ Upload successful. Payload sent via ${submitMode}.`, "ok");
-
-        // If modal remains open in some clients, user can close manually.
-      } catch (err) {
-        console.error(err);
-        setStatus(`❌ Upload done, but payload submit failed: ${err.message}`, "err");
+        setStatus("✅ Upload successful. Payload sent to Copilot Studio.", "ok");
+      } catch (e) {
+        console.error(e);
+        setStatus(`❌ Upload done, but failed to send payload: ${e.message}`, "err");
         setBusy(false);
       }
     }
@@ -260,7 +130,10 @@
     uploadBtn.addEventListener("click", upload);
 
     (async () => {
-      sdkReady = await initTeams();
+      teamsReady = await initTeams();
+      if (!teamsReady) {
+        setStatus("❌ This Teams host does not expose tasks.submitTask.", "err");
+      }
     })();
   </script>
 </body>
