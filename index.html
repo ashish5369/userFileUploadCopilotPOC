@@ -7,12 +7,21 @@
   <style>
     body{font-family:"Segoe UI",sans-serif;padding:20px;background:#f5f5f5;margin:0}
     .container{max-width:700px;margin:0 auto;background:#fff;padding:20px;border-radius:8px}
+    .info{background:#eee;padding:10px;border-radius:4px;font-family:monospace;margin-bottom:20px}
+    button{padding:8px 16px;cursor:pointer;margin-left:10px}
     #status{margin-top:12px;font-weight:600}
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Upload Document</h2>
+    <h2>File Upload</h2>
+    <div class="info">
+      <div>Conversation: <span id="cid"></span></div>
+      <div>First Name: <span id="fn"></span></div>
+      <div>Last Name: <span id="ln"></span></div>
+      <div>Email: <span id="em"></span></div>
+    </div>
+
     <input type="file" id="fileInput" />
     <button id="uploadBtn">Upload</button>
     <div id="status"></div>
@@ -20,6 +29,19 @@
 
   <script>
     microsoftTeams.initialize();
+
+    const qs = new URLSearchParams(window.location.search);
+    const context = {
+      conversationId: qs.get("conversationId") || "",
+      firstName: qs.get("firstName") || "",
+      lastName: qs.get("lastName") || "",
+      email: qs.get("email") || ""
+    };
+
+    document.getElementById("cid").textContent = context.conversationId || "N/A";
+    document.getElementById("fn").textContent = context.firstName || "N/A";
+    document.getElementById("ln").textContent = context.lastName || "N/A";
+    document.getElementById("em").textContent = context.email || "N/A";
 
     document.getElementById("uploadBtn").addEventListener("click", () => {
       const file = document.getElementById("fileInput").files[0];
@@ -33,7 +55,11 @@
       status.textContent = "Uploading...";
 
       const payload = {
-        fileName: file.name
+        fileName: file.name,
+        conversationId: context.conversationId,
+        firstName: context.firstName,
+        lastName: context.lastName,
+        email: context.email
       };
 
       try {
