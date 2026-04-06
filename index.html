@@ -2,72 +2,44 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>File Upload Modal</title>
-  <style>
-    body { font-family: "Segoe UI", sans-serif; padding: 20px; background: #f5f5f5; margin: 0; }
-    .container { max-width: 700px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    .info { background: #eee; padding: 10px; border-radius: 4px; font-family: monospace; margin-bottom: 20px; }
-    button { padding: 8px 16px; cursor: pointer; margin-left: 10px; border-radius: 4px; border: 1px solid #888; background: #fff; }
-    #status { margin-top: 15px; font-weight: bold; }
-  </style>
+  <title>File Upload</title>
   <script src="https://unpkg.com/@microsoft/teams-js@2.22.0/dist/MicrosoftTeams.min.js"></script>
+  <style>
+    body{font-family:"Segoe UI",sans-serif;padding:20px;background:#f5f5f5;margin:0}
+    .container{max-width:700px;margin:0 auto;background:#fff;padding:20px;border-radius:8px}
+    #status{margin-top:12px;font-weight:600}
+  </style>
 </head>
 <body>
   <div class="container">
-    <h2>File Upload</h2>
-    <div class="info">
-      <div>Conv ID: <span id="cid"></span></div>
-      <div>Name: <span id="fn"></span> <span id="ln"></span></div>
-    </div>
-    
+    <h2>Upload Document</h2>
     <input type="file" id="fileInput" />
     <button id="uploadBtn">Upload</button>
     <div id="status"></div>
   </div>
 
   <script>
-    // 1. Get parameters from URL
-    const qs = new URLSearchParams(window.location.search);
-    const context = {
-      conversationId: qs.get("conversationId") || "N/A",
-      firstName: qs.get("firstName") || "N/A",
-      lastName: qs.get("lastName") || "N/A",
-      email: qs.get("email") || "N/A"
-    };
+    microsoftTeams.initialize();
 
-    document.getElementById("cid").textContent = context.conversationId;
-    document.getElementById("fn").textContent = context.firstName;
-    document.getElementById("ln").textContent = context.lastName;
-
-    // 2. Initialize Teams SDK
-    microsoftTeams.app.initialize();
-
-    // 3. Handle the Upload Button Click
     document.getElementById("uploadBtn").addEventListener("click", () => {
       const file = document.getElementById("fileInput").files[0];
-      const statusEl = document.getElementById("status");
-      
+      const status = document.getElementById("status");
+
       if (!file) {
-        statusEl.textContent = "❌ ERROR: No file selected.";
+        status.textContent = "❌ Please select a file.";
         return;
       }
 
-      statusEl.textContent = "Processing...";
+      status.textContent = "Uploading...";
 
       const payload = {
-        fileName: file.name,
-        // Add any other data you need from the file or context here
+        fileName: file.name
       };
 
-      // 4. Submit payload to bot and automatically close the modal.
-      // This is the ONLY function that reliably works for this scenario.
       try {
         microsoftTeams.tasks.submitTask(payload);
-        // If this function call succeeds, the modal will close and the 
-        // "task/submit" topic will be triggered in your bot.
       } catch (e) {
-        console.error("submitTask failed", e);
-        statusEl.textContent = "❌ FATAL: Could not send data to the bot. Please close this window.";
+        status.textContent = "❌ submitTask failed.";
       }
     });
   </script>
