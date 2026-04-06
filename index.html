@@ -106,7 +106,7 @@
     }
   </style>
 
-  <!-- Teams JS SDK v2 -->
+  <!-- Teams JS SDK -->
   <script src="https://unpkg.com/@microsoft/teams-js@2.22.0/dist/MicrosoftTeams.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
@@ -127,7 +127,7 @@
     </div>
 
     <p id="status"></p>
-    <p class="hint">After successful upload, data is sent back to Copilot Studio.</p>
+    <p class="hint">After successful upload, payload is sent back to Copilot Studio.</p>
 
     <p id="warn" class="notice">
       ⚠️ Teams SDK unavailable. Upload UI works, but payload cannot be sent to bot.
@@ -156,21 +156,31 @@
     document.getElementById("ln").textContent = context.lastName || "N/A";
     document.getElementById("em").textContent = context.email || "N/A";
 
-    async function initTeamsSdk() {
+    async function initTeams() {
       try {
         if (typeof microsoftTeams === "undefined") {
           warnEl.style.display = "block";
-          return;
+          return false;
         }
+
+        // v2 init
         if (microsoftTeams.app?.initialize) {
           await microsoftTeams.app.initialize();
-          sdkReady = true;
-          return;
+          return true;
         }
+
+        // legacy init fallback
+        if (typeof microsoftTeams.initialize === "function") {
+          microsoftTeams.initialize();
+          return true;
+        }
+
         warnEl.style.display = "block";
+        return false;
       } catch (e) {
-        console.error("Teams SDK init failed:", e);
+        console.error("Teams init failed:", e);
         warnEl.style.display = "block";
+        return false;
       }
     }
 
@@ -181,19 +191,26 @@
     }
 
     function setStatus(text, type) {
-      statusEl.textContent = text;
+      statusEl.textContent = text || "";
       statusEl.classList.remove("ok", "err");
       if (type === "ok") statusEl.classList.add("ok");
       if (type === "err") statusEl.classList.add("err");
     }
 
-    function submitToBot(payload) {
-      // v2 only (intentional)
+    function submitPayloadToTeams(payload) {
+      // Preferred v2
       if (microsoftTeams?.dialog?.submit) {
         microsoftTeams.dialog.submit(payload);
-        return true;
+        return "dialog.submit";
       }
-      return false;
+
+      // Legacy fallback (needed in some tenants/clients)
+      if (microsoftTeams?.tasks?.submitTask) {
+        microsoftTeams.tasks.submitTask(payload);
+        return "tasks.submitTask";
+      }
+
+      throw new Error("No Teams submit API available");
     }
 
     async function upload() {
@@ -229,24 +246,22 @@
           return;
         }
 
-        const ok = submitToBot(payload);
-        if (!ok) {
-          setStatus("❌ Upload done, but dialog.submit API is unavailable.", "err");
-          setBusy(false);
-          return;
-        }
+        const submitMode = submitPayloadToTeams(payload);
+        setStatus(`✅ Upload successful. Payload sent via ${submitMode}.`, "ok");
 
-        setStatus("✅ Upload successful. Sending data to bot...", "ok");
-        // Dialog will close after submit when Teams handles it.
+        // If modal remains open in some clients, user can close manually.
       } catch (err) {
         console.error(err);
-        setStatus("❌ Upload failed. Please try again.", "err");
+        setStatus(`❌ Upload done, but payload submit failed: ${err.message}`, "err");
         setBusy(false);
       }
     }
 
     uploadBtn.addEventListener("click", upload);
-    initTeamsSdk();
+
+    (async () => {
+      sdkReady = await initTeams();
+    })();
   </script>
 </body>
 </html>
